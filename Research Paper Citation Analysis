@@ -1,0 +1,36 @@
+'''
+Adobe maintains a catalog of AI research papers and their authors. For each author whose paper_id exists in the paper catalog, assign a position starting at 1 within that paper, with smaller author_id values appearing first. Return author_id, name, paper_id, and row_number, ordered by paper and then position.
+
+Schema columns: ai_author.paper_id, ai_author.author_id, ai_author.name, ai_research_papers.paper_id, ai_research_papers.title, ai_research_papers.year
+
+Output columns: author_id, name, paper_id, row_number
+
+author_id identifies the result's author id; name identifies the result's name; paper_id identifies the result's paper id; row_number is the author's 1-based position within the paper.'''
+
+### Solution
+from pyspark.sql import SparkSession
+from pyspark.sql import functions as F
+from pyspark.sql import Window as W
+import pyspark
+import datetime
+import json
+
+spark = SparkSession.builder.appName('run-pyspark-code').getOrCreate()
+
+def etl(authors, research_papers):
+    window_spec = W.partitionBy("r.paper_id").orderBy(F.col("a.author_id"))
+    result = (
+        ai_author.alias("a")
+        .join(
+            ai_research_papers.alias("r"),
+            F.col("a.paper_id") == F.col("r.paper_id"),
+            "inner"
+        )
+        .select(
+            F.col("a.author_id").alias("author_id"),
+            F.col("a.name").alias("name"),
+            F.col("r.paper_id").alias("paper_id"),
+            F.rank().over(window_spec).alias("row_number")
+        )
+    )
+    return result
